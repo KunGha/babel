@@ -1,5 +1,3 @@
-/* @flow */
-
 import defineType from "./index";
 
 defineType("AnyTypeAnnotation", {
@@ -230,6 +228,14 @@ defineType("TypeAnnotation", {
 defineType("TypeCastExpression", {
   visitor: ["expression", "typeAnnotation"],
   aliases: ["Flow", "ExpressionWrapper", "Expression"],
+  fields: {
+    // todo
+  }
+});
+
+defineType("TypeParameter", {
+  visitor: ["bound"],
+  aliases: ["Flow"],
   fields: {
     // todo
   }

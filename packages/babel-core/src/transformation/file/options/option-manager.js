@@ -1,3 +1,5 @@
+/* eslint max-len: 0 */
+
 import * as context from "../../../api/node";
 import type Logger from "../logger";
 import Plugin from "../../plugin";
@@ -7,10 +9,11 @@ import resolve from "../../../helpers/resolve";
 import json5 from "json5";
 import isAbsolute from "path-is-absolute";
 import pathExists from "path-exists";
-import cloneDeep from "lodash/lang/cloneDeep";
-import clone from "lodash/lang/clone";
+import cloneDeepWith from "lodash/cloneDeepWith";
+import clone from "lodash/clone";
 import merge from "../../../helpers/merge";
 import config from "./config";
+import removed from "./removed";
 import path from "path";
 import fs from "fs";
 
@@ -205,7 +208,7 @@ export default class OptionManager {
     }
 
     //
-    let opts = cloneDeep(rawOpts, val => {
+    let opts = cloneDeepWith(rawOpts, (val) => {
       if (val instanceof Plugin) {
         return val;
       }
@@ -220,7 +223,13 @@ export default class OptionManager {
 
       // check for an unknown option
       if (!option && this.log) {
-        this.log.error(`Unknown option: ${alias}.${key}`, ReferenceError);
+        let pluginOptsInfo = "Check out http://babeljs.io/docs/usage/options/ for more info";
+
+        if (removed[key]) {
+          this.log.error(`Using removed Babel 5 option: ${alias}.${key} - ${removed[key].message}`, ReferenceError);
+        } else {
+          this.log.error(`Unknown option: ${alias}.${key}. ${pluginOptsInfo}`, ReferenceError);
+        }
       }
     }
 
@@ -300,7 +309,7 @@ export default class OptionManager {
         options: presetOpts,
         alias: presetLoc,
         loc: presetLoc,
-        dirname: path.dirname(presetLoc)
+        dirname: path.dirname(presetLoc || "")
       });
     });
   }
@@ -310,7 +319,7 @@ export default class OptionManager {
    * or a module name to require.
    */
   resolvePresets(presets: Array<string | Object>, dirname: string, onResolve?) {
-    return presets.map(val => {
+    return presets.map((val) => {
       if (typeof val === "string") {
         let presetLoc = resolve(`babel-preset-${val}`, dirname) || resolve(val, dirname);
         if (presetLoc) {

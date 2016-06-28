@@ -12,14 +12,16 @@ build-dist: build
 	scripts/build-dist.sh
 	cd packages/babel-runtime; \
 	node scripts/build-dist.js
+	node scripts/generate-babel-types-docs.js
 
 watch: clean
 	./node_modules/.bin/gulp watch
 
 lint:
-	./node_modules/.bin/eslint packages/*/src
+	./node_modules/.bin/kcheck
 
 clean: test-clean
+	rm -rf packages/*/lib
 	rm -rf packages/babel-polyfill/browser*
 	rm -rf coverage
 	rm -rf packages/*/npm-debug*
@@ -43,15 +45,15 @@ test-cov: clean
 test-ci:
 	make lint
 	NODE_ENV=test make bootstrap
-	if ./node_modules/.bin/semver `npm --version` -r ">=3.3.0"; then ./node_modules/.bin/flow check; fi
 	./scripts/test-cov.sh
 	cat ./coverage/coverage.json | ./node_modules/codecov.io/bin/codecov.io.js
 
 publish:
 	git pull --rebase
-	make build
+	rm -rf packages/*/lib
+	BABEL_ENV=production make build-dist
 	make test
-	./node_modules/.bin/lerna publish
+	./node_modules/.bin/lerna publish --only-explicit-updates
 	make clean
 	#./scripts/build-website.sh
 
@@ -60,4 +62,5 @@ bootstrap:
 	./node_modules/.bin/lerna bootstrap
 	make build
 	cd packages/babel-runtime; \
+	npm install; \
 	node scripts/build-dist.js
