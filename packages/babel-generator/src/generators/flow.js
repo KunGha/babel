@@ -1,7 +1,5 @@
 /* eslint max-len: 0 */
 
-import * as t from "babel-types";
-
 export function AnyTypeAnnotation() {
   this.word("any");
 }
@@ -58,6 +56,15 @@ export function DeclareModule(node: Object) {
   this.print(node.body, node);
 }
 
+export function DeclareModuleExports(node: Object) {
+  this.word("declare");
+  this.space();
+  this.word("module");
+  this.token(".");
+  this.word("exports");
+  this.print(node.typeAnnotation, node);
+}
+
 export function DeclareTypeAlias(node: Object) {
   this.word("declare");
   this.space();
@@ -95,7 +102,7 @@ export function FunctionTypeAnnotation(node: Object, parent: Object) {
   this.token(")");
 
   // this node type is overloaded, not sure why but it makes it EXTREMELY annoying
-  if (parent.type === "ObjectTypeProperty" || parent.type === "ObjectTypeCallProperty" || parent.type === "DeclareFunction") {
+  if (parent.type === "ObjectTypeCallProperty" || parent.type === "DeclareFunction") {
     this.token(":");
   } else {
     this.space();
@@ -251,6 +258,7 @@ export function ObjectTypeAnnotation(node: Object) {
 
     this.printJoin(props, node, {
       indent: true,
+      statement: true,
       iterator: () => {
         if (props.length !== 1) {
           this.semicolon();
@@ -296,10 +304,8 @@ export function ObjectTypeProperty(node: Object) {
   }
   this.print(node.key, node);
   if (node.optional) this.token("?");
-  if (!t.isFunctionTypeAnnotation(node.value)) {
-    this.token(":");
-    this.space();
-  }
+  this.token(":");
+  this.space();
   this.print(node.value, node);
 }
 

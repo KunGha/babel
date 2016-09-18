@@ -48,9 +48,11 @@ function compile(filename) {
   let result;
 
   // merge in base options and resolve all the plugins and presets relative to this file
-  let opts = new OptionManager().init(extend(deepClone(transformOpts), {
-    filename
-  }));
+  let opts = new OptionManager().init(extend(
+    { sourceRoot: path.dirname(filename) }, // sourceRoot can be overwritten
+    deepClone(transformOpts),
+    { filename }
+  ));
 
   let cacheKey = `${JSON.stringify(opts)}:${babel.version}`;
 
@@ -69,8 +71,8 @@ function compile(filename) {
       // Do not process config files since has already been done with the OptionManager
       // calls above and would introduce duplicates.
       babelrc: false,
-      sourceMap: "both",
-      ast:       false
+      sourceMaps: "both",
+      ast: false
     }));
   }
 

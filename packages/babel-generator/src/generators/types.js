@@ -2,6 +2,7 @@
 /* eslint quotes: 0 */
 
 import * as t from "babel-types";
+import jsesc from "jsesc";
 
 export function Identifier(node: Object) {
   // FIXME: We hang variance off Identifer to support Flow's def-site variance.
@@ -38,7 +39,7 @@ export function ObjectExpression(node: Object) {
 
   if (props.length) {
     this.space();
-    this.printList(props, node, { indent: true });
+    this.printList(props, node, { indent: true, statement: true });
     this.space();
   }
 
@@ -124,12 +125,8 @@ export function NullLiteral() {
 
 export function NumericLiteral(node: Object) {
   let raw = this.getPossibleRaw(node);
-  if (raw != null) {
-    this.word(raw);
-    return;
-  }
 
-  this.word(node.value + "");
+  this.number(raw == null ? node.value + "" : raw);
 }
 
 export function StringLiteral(node: Object, parent: Object) {
@@ -139,26 +136,11 @@ export function StringLiteral(node: Object, parent: Object) {
     return;
   }
 
-  let val = JSON.stringify(node.value);
-
-  // escape illegal js but valid json unicode characters
-  val = val.replace(/[\u000A\u000D\u2028\u2029]/g, function (c) {
-    return "\\u" + ("0000" + c.charCodeAt(0).toString(16)).slice(-4);
+  // ensure the output is ASCII-safe
+  let val = jsesc(node.value, {
+    quotes: t.isJSX(parent) ? "double" : this.format.quotes,
+    wrap: true
   });
-
-  if (this.format.quotes === "single" && !t.isJSX(parent)) {
-    // remove double quotes
-    val = val.slice(1, -1);
-
-    // unescape double quotes
-    val = val.replace(/\\"/g, '"');
-
-    // escape single quotes
-    val = val.replace(/'/g, "\\'");
-
-    // add single quotes
-    val = `'${val}'`;
-  }
 
   return this.token(val);
 }
