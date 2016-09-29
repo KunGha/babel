@@ -261,6 +261,18 @@ export default class OptionManager {
       try {
         if (typeof val === "string") {
           presetLoc = resolve(`babel-preset-${val}`, dirname) || resolve(val, dirname);
+
+          // trying to resolve @organization shortcat
+          // @foo/es2015 -> @foo/babel-preset-es2015
+          if (!presetLoc) {
+            let matches = val.match(/^(@[^/]+)\/(.+)$/);
+            if (matches) {
+              let [, orgName, presetPath] = matches;
+              val = `${orgName}/babel-preset-${presetPath}`;
+              presetLoc = resolve(val, dirname);
+            }
+          }
+
           if (!presetLoc) {
             throw new Error(`Couldn't find preset ${JSON.stringify(val)} relative to directory ` +
               JSON.stringify(dirname));
@@ -268,6 +280,9 @@ export default class OptionManager {
 
           val = require(presetLoc);
         }
+
+        // If the imported preset is a transpiled ES2015 module, grab the default export.
+        if (typeof val === "object" && val.__esModule) val = val.default;
 
         // For compatibility with babel-core < 6.13.x, allow presets to export an object with a
         // a 'buildPreset' function that will return the preset itself, while still exporting a

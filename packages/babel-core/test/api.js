@@ -5,6 +5,7 @@ var sourceMap            = require("source-map");
 var assert               = require("assert");
 var File                 = require("../lib/transformation/file").default;
 var Plugin               = require("../lib/transformation/plugin");
+var generator            = require("babel-generator").default;
 
 function assertIgnored(result) {
   assert.ok(result.ignored);
@@ -22,6 +23,77 @@ function transformAsync(code, opts) {
     }
   };
 }
+
+suite("parser and generator options", function() {
+  var recast = {
+    parse: function(code, opts) {
+      return opts.parser.parse(code);
+    },
+    print: function(ast) {
+      return generator(ast);
+    }
+  };
+
+  function newTransform(string) {
+    return babel.transform(string, {
+      parserOpts: {
+        parser: recast.parse,
+        plugins: ["flow"],
+        allowImportExportEverywhere: true
+      },
+      generatorOpts: {
+        generator: recast.print
+      }
+    });
+  }
+
+  test("options", function() {
+    var string = "original;";
+    assert.deepEqual(newTransform(string).ast, babel.transform(string).ast);
+    assert.equal(newTransform(string).code, string);
+  });
+
+  test("experimental syntax", function() {
+    var experimental = "var a: number = 1;";
+
+    assert.deepEqual(newTransform(experimental).ast, babel.transform(experimental, {
+      parserOpts: {
+        plugins: ["flow"]
+      }
+    }).ast);
+    assert.equal(newTransform(experimental).code, experimental);
+
+    function newTransformWithPlugins(string) {
+      return babel.transform(string, {
+        plugins: [__dirname + "/../../babel-plugin-syntax-flow"],
+        parserOpts: {
+          parser: recast.parse
+        },
+        generatorOpts: {
+          generator: recast.print
+        }
+      });
+    }
+
+    assert.deepEqual(newTransformWithPlugins(experimental).ast, babel.transform(experimental, {
+      parserOpts: {
+        plugins: ["flow"]
+      }
+    }).ast);
+    assert.equal(newTransformWithPlugins(experimental).code, experimental);
+  });
+
+  test("other options", function() {
+    var experimental = "if (true) {\n  import a from 'a';\n}";
+
+    assert.notEqual(newTransform(experimental).ast, babel.transform(experimental, {
+      parserOpts: {
+        allowImportExportEverywhere: true
+      }
+    }).ast);
+    assert.equal(newTransform(experimental).code, experimental);
+  });
+});
 
 suite("api", function () {
   test("analyze", function () {
@@ -183,6 +255,28 @@ suite("api", function () {
       '};'
     ].join("\n"), result.code);
 
+  });
+
+  test("handles preset shortcuts (adds babel-preset-)", function () {
+    return assert.throws(
+      function () {
+        babel.transform("", {
+          presets: ["@babel/es2015"]
+        });
+      },
+      /Couldn\'t find preset \"\@babel\/babel\-preset\-es2015\" relative to directory/
+    );
+  });
+
+  test("handles preset shortcuts 2 (adds babel-preset-)", function () {
+    return assert.throws(
+      function () {
+        babel.transform("", {
+          presets: ["@babel/react/optimizations"]
+        });
+      },
+      /Couldn\'t find preset \"\@babel\/babel\-preset\-react\/optimizations\" relative to directory/
+    );
   });
 
   test("source map merging", function () {
